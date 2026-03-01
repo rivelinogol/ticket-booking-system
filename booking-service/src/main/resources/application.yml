@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: booking-service
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:bookingdb}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8084}
+
+services:
+  seat-inventory:
+    url: ${SERVICES_SEAT_INVENTORY_URL:http://localhost:8083}
+  payment:
+    url: ${SERVICES_PAYMENT_URL:http://localhost:8085}
+  notification:
+    url: ${SERVICES_NOTIFICATION_URL:http://localhost:8086}
+
+app:
+  kafka:
+    booking-events-topic: ${APP_KAFKA_BOOKING_EVENTS_TOPIC:booking-events}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

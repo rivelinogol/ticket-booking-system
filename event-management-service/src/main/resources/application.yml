@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: event-management-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:eventdb}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8082}
+
+services:
+  seat-inventory:
+    url: ${SERVICES_SEAT_INVENTORY_URL:http://localhost:8083}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

@@ -1,0 +1,4 @@
+CREATE DATABASE authdb;
+CREATE DATABASE eventdb;
+CREATE DATABASE seatdb;
+CREATE DATABASE bookingdb;
