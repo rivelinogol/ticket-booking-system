@@ -841,7 +841,7 @@ SET event:{eventId} {json} EX 30
 |---|---|---|---|
 | `booking-events` | booking-service | notification-service | `{type, bookingId, userId, ...}` |
 | `payment-events` | payment-service | booking-service | `{bookingId, transactionId, status}` |
-| `audit-log` | todos | ELK Stack | `{service, action, userId, timestamp}` |
+| `audit-log` | booking-service, payment-service | audit-service, ELK Stack (Logstash) | `{service, action, userId, timestamp}` |
 
 ---
 
@@ -956,6 +956,12 @@ ticket-booking-system/
             ├── in/rest/             ← NotificationController (→ KafkaListener en prod)
             ├── out/email/           ← SesEmailAdapter (stub)
             └── out/sms/             ← TwilioSmsAdapter (stub)
+
+└── audit-service/            :8088
+    └── .../audit/
+        └── infrastructure/
+            ├── in/messaging/        ← AuditLogKafkaConsumer (@KafkaListener audit-log)
+            └── out/persistence/     ← AuditLogJpaEntity + repository
 ```
 
 ---
@@ -964,9 +970,9 @@ ticket-booking-system/
 
 El proyecto incluye un `docker-compose.yml` para levantar un entorno de desarrollo integrado con:
 
-- Microservicios: `auth`, `event-management`, `seat-inventory`, `booking`, `payment`, `notification`
+- Microservicios: `auth`, `event-management`, `seat-inventory`, `booking`, `payment`, `notification`, `audit`
 - Datos y mensajería: `PostgreSQL`, `Redis`, `Kafka` (via Redpanda)
-- Observabilidad: `Prometheus`, `Grafana`
+- Observabilidad: `Prometheus`, `Grafana`, `ELK (Elasticsearch + Logstash + Kibana)`
 - UI para mensajería: `Kafka UI`
 
 ### 17.1 Prerrequisitos
@@ -975,7 +981,7 @@ Antes de levantar el stack:
 
 - Docker Engine instalado y corriendo.
 - Docker Compose v2 disponible (`docker compose version`).
-- Puertos libres: `3000`, `5432`, `6379`, `8081-8087`, `9090`, `9092`.
+- Puertos libres: `3000`, `5432`, `5601`, `6379`, `8081-8088`, `9090`, `9092`, `9200`, `9600`, `27017`.
 - Ejecutar comandos desde la raíz del repo:
   - `/home/avaca/Documentos/ticket-booking-system`
 
@@ -997,9 +1003,13 @@ docker info > /dev/null && echo "Docker OK"
 | booking-service | 8084 | `http://localhost:8084` |
 | payment-service | 8085 | `http://localhost:8085` |
 | notification-service | 8086 | `http://localhost:8086` |
+| audit-service | 8088 | `http://localhost:8088` |
 | Kafka UI | 8087 | `http://localhost:8087` |
 | Prometheus | 9090 | `http://localhost:9090` |
 | Grafana | 3000 | `http://localhost:3000` (`admin/admin`) |
+| Kibana | 5601 | `http://localhost:5601` |
+| Elasticsearch | 9200 | `http://localhost:9200` |
+| Logstash Monitoring API | 9600 | `http://localhost:9600` |
 | PostgreSQL | 5432 | `localhost:5432` |
 | MongoDB | 27017 | `localhost:27017` |
 | Redis | 6379 | `localhost:6379` |
@@ -1022,10 +1032,10 @@ Para diagnóstico más simple, conviene levantar por capas:
 
 ```bash
 # 1) Infra base
-docker compose up -d postgres mongodb redis kafka kafka-ui
+docker compose up -d postgres mongodb redis kafka kafka-ui elasticsearch logstash kibana
 
 # 2) Servicios core
-docker compose up -d auth-service seat-inventory-service event-management-service payment-service notification-service booking-service
+docker compose up -d auth-service seat-inventory-service event-management-service payment-service notification-service booking-service audit-service
 
 # 3) Observabilidad
 docker compose up -d prometheus grafana
@@ -1159,6 +1169,7 @@ El init script `infra/postgres/init/01-create-databases.sql` crea:
 - `eventdb`
 - `seatdb`
 - `bookingdb`
+- `auditdb`
 
 Las credenciales por defecto del contenedor Postgres son:
 
@@ -1220,6 +1231,9 @@ El entorno de infraestructura está disponible en Docker y ya incluye integracio
 - `seat-inventory-service` soporta lock Redis real vía `RedisSeatLockAdapter`
 - `StripePaymentAdapter` implementa idempotencia por `bookingId`
 - `payment-service` valida firma de webhook (`Stripe-Signature`)
+- `booking-service` y `payment-service` publican en topic Kafka `audit-log`
+- `audit-service` consume `audit-log` y persiste auditoría en PostgreSQL
+- Logstash consume `audit-log` y lo indexa en Elasticsearch (Kibana para exploración)
 
 Aún pendiente para ambiente productivo real:
 
@@ -1240,6 +1254,7 @@ curl -i http://localhost:8083/actuator/health
 curl -i http://localhost:8084/actuator/health
 curl -i http://localhost:8085/actuator/health
 curl -i http://localhost:8086/actuator/health
+curl -i http://localhost:8088/actuator/health
 ```
 
 ### 18.2 Probar API básica de eventos

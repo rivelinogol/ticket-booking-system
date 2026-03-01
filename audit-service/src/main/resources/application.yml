@@ -1,40 +1,33 @@
 spring:
   application:
-    name: booking-service
+    name: audit-service
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:audit-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.ticketbooking.common.dto
+        spring.json.value.default.type: com.ticketbooking.common.dto.AuditLogEventDTO
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:bookingdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:auditdb}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-  h2:
-    console:
-      enabled: true
   jpa:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
-    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     open-in-view: false
-
-server:
-  port: ${SERVER_PORT:8084}
-
-services:
-  seat-inventory:
-    url: ${SERVICES_SEAT_INVENTORY_URL:http://localhost:8083}
-  payment:
-    url: ${SERVICES_PAYMENT_URL:http://localhost:8085}
-  notification:
-    url: ${SERVICES_NOTIFICATION_URL:http://localhost:8086}
 
 app:
   kafka:
-    booking-events-topic: ${APP_KAFKA_BOOKING_EVENTS_TOPIC:booking-events}
     audit-log-topic: ${APP_KAFKA_AUDIT_LOG_TOPIC:audit-log}
+
+server:
+  port: ${SERVER_PORT:8088}
 
 management:
   endpoints:

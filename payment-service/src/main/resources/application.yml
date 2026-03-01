@@ -1,10 +1,19 @@
 spring:
   application:
     name: payment-service
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 payment:
   webhook:
     secret: ${PAYMENT_WEBHOOK_SECRET:dev-webhook-secret}
+
+app:
+  kafka:
+    audit-log-topic: ${APP_KAFKA_AUDIT_LOG_TOPIC:audit-log}
 
 server:
   port: ${SERVER_PORT:8085}

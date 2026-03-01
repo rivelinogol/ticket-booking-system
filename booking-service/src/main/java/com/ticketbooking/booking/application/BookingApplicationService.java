@@ -39,15 +39,18 @@ public class BookingApplicationService
     private final SeatLockingPort seatLocking;
     private final PaymentPort payment;
     private final NotificationPort notification;
+    private final AuditLogPort auditLog;
 
     public BookingApplicationService(BookingRepositoryPort bookingRepository,
                                      SeatLockingPort seatLocking,
                                      PaymentPort payment,
-                                     NotificationPort notification) {
+                                     NotificationPort notification,
+                                     AuditLogPort auditLog) {
         this.bookingRepository = bookingRepository;
         this.seatLocking = seatLocking;
         this.payment = payment;
         this.notification = notification;
+        this.auditLog = auditLog;
     }
 
     @Override
@@ -66,6 +69,13 @@ public class BookingApplicationService
 
         // 3. Persistir
         Booking saved = bookingRepository.save(booking);
+        auditLog.log(
+                "BOOKING_INITIATED",
+                saved.getId(),
+                saved.getUserId(),
+                saved.getStatus().name(),
+                "Seat locked and booking created as pending"
+        );
 
         return toResponse(saved);
     }
@@ -90,6 +100,13 @@ public class BookingApplicationService
 
         // 6. Notificar de forma async (no bloquea el flujo crítico)
         notification.notifyConfirmation(saved.getId());
+        auditLog.log(
+                "BOOKING_CONFIRMED",
+                saved.getId(),
+                saved.getUserId(),
+                saved.getStatus().name(),
+                "Payment confirmed and seat booked"
+        );
 
         return toResponse(saved);
     }
@@ -105,6 +122,13 @@ public class BookingApplicationService
         seatLocking.release(booking.getSeatId());
         bookingRepository.save(booking);
         notification.notifyCancellation(booking.getId());
+        auditLog.log(
+                "BOOKING_CANCELLED",
+                booking.getId(),
+                booking.getUserId(),
+                booking.getStatus().name(),
+                "Booking cancelled and seat released"
+        );
     }
 
     @Override
@@ -114,6 +138,13 @@ public class BookingApplicationService
                     booking.expire(); // lógica en el agregado
                     seatLocking.release(booking.getSeatId());
                     bookingRepository.save(booking);
+                    auditLog.log(
+                            "BOOKING_EXPIRED",
+                            booking.getId(),
+                            booking.getUserId(),
+                            booking.getStatus().name(),
+                            "Booking expired by TTL and seat released"
+                    );
                 });
     }
 

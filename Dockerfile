@@ -11,6 +11,7 @@ COPY seat-inventory-service seat-inventory-service
 COPY booking-service booking-service
 COPY payment-service payment-service
 COPY notification-service notification-service
+COPY audit-service audit-service
 
 RUN mvn -pl ${SERVICE_MODULE} -am clean package -DskipTests
 

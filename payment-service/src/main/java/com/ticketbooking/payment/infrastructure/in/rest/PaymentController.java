@@ -2,6 +2,7 @@ package com.ticketbooking.payment.infrastructure.in.rest;
 
 import com.ticketbooking.common.dto.PaymentRequestDTO;
 import com.ticketbooking.payment.domain.port.in.ProcessPaymentUseCase;
+import com.ticketbooking.payment.infrastructure.out.messaging.AuditLogPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,11 +13,14 @@ public class PaymentController {
 
     private final ProcessPaymentUseCase processPayment;
     private final WebhookSignatureVerifier signatureVerifier;
+    private final AuditLogPublisher auditLogPublisher;
 
     public PaymentController(ProcessPaymentUseCase processPayment,
-                             WebhookSignatureVerifier signatureVerifier) {
+                             WebhookSignatureVerifier signatureVerifier,
+                             AuditLogPublisher auditLogPublisher) {
         this.processPayment = processPayment;
         this.signatureVerifier = signatureVerifier;
+        this.auditLogPublisher = auditLogPublisher;
     }
 
     @PostMapping("/process")
@@ -35,8 +39,10 @@ public class PaymentController {
             @RequestBody String payload,
             @RequestHeader(value = "Stripe-Signature", required = false) String sig) {
         if (!signatureVerifier.isValid(payload, sig)) {
+            auditLogPublisher.publish("PAYMENT_WEBHOOK_REJECTED", null, "UNAUTHORIZED", "Invalid Stripe signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        auditLogPublisher.publish("PAYMENT_WEBHOOK_ACCEPTED", null, "SUCCESS", "Webhook signature validated");
         return ResponseEntity.ok().build();
     }
 }

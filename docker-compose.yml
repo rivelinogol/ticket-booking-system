@@ -80,6 +80,44 @@ services:
       kafka:
         condition: service_healthy
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    ports:
+      - "9600:9600"
+    volumes:
+      - ./monitoring/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
   auth-service:
     build:
       context: .
@@ -163,6 +201,8 @@ services:
     environment:
       SERVER_PORT: 8085
       PAYMENT_WEBHOOK_SECRET: dev-webhook-secret
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_AUDIT_LOG_TOPIC: audit-log
     depends_on:
       kafka:
         condition: service_healthy
@@ -202,6 +242,7 @@ services:
       SERVICES_PAYMENT_URL: http://payment-service:8085
       SERVICES_NOTIFICATION_URL: http://notification-service:8086
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_AUDIT_LOG_TOPIC: audit-log
     depends_on:
       postgres:
         condition: service_healthy
@@ -211,6 +252,30 @@ services:
         condition: service_started
       notification-service:
         condition: service_started
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_MODULE: audit-service
+    ports:
+      - "8088:8088"
+    environment:
+      SERVER_PORT: 8088
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auditdb
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_DATASOURCE_USERNAME: ticketbook
+      SPRING_DATASOURCE_PASSWORD: ticketbook
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: false
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_AUDIT_LOG_TOPIC: audit-log
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v3.2.1
@@ -230,6 +295,7 @@ services:
       - booking-service
       - payment-service
       - notification-service
+      - audit-service
 
   grafana:
     image: grafana/grafana:11.5.2
@@ -249,5 +315,6 @@ volumes:
   redis-data:
   mongodb-data:
   kafka-data:
+  elasticsearch-data:
   prometheus-data:
   grafana-data:
