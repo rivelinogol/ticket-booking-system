@@ -2,11 +2,17 @@ package com.ticketbooking.event.infrastructure.out.persistence;
 
 import com.ticketbooking.event.domain.model.Venue;
 import com.ticketbooking.event.domain.port.out.VenueRepositoryPort;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.event.persistence-provider",
+        havingValue = "jpa",
+        matchIfMissing = true
+)
 public class VenueRepositoryAdapter implements VenueRepositoryPort {
 
     private final VenueJpaRepository jpa;

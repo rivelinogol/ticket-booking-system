@@ -28,6 +28,18 @@ services:
       timeout: 5s
       retries: 10
 
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   kafka:
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.8
     command:
@@ -129,9 +141,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ticketbook
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: false
+      APP_EVENT_PERSISTENCE_PROVIDER: mongo
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/eventdb
       SERVICES_SEAT_INVENTORY_URL: http://seat-inventory-service:8083
     depends_on:
       postgres:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
       seat-inventory-service:
         condition: service_started
@@ -231,6 +247,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  mongodb-data:
   kafka-data:
   prometheus-data:
   grafana-data:

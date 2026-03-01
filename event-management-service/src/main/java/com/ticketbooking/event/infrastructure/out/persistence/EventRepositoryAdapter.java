@@ -3,6 +3,7 @@ package com.ticketbooking.event.infrastructure.out.persistence;
 import com.ticketbooking.event.domain.model.Event;
 import com.ticketbooking.event.domain.model.enums.EventStatus;
 import com.ticketbooking.event.domain.port.out.EventRepositoryPort;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,6 +11,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.event.persistence-provider",
+        havingValue = "jpa",
+        matchIfMissing = true
+)
 public class EventRepositoryAdapter implements EventRepositoryPort {
 
     private final EventJpaRepository jpa;

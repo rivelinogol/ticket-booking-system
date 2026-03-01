@@ -1001,6 +1001,7 @@ docker info > /dev/null && echo "Docker OK"
 | Prometheus | 9090 | `http://localhost:9090` |
 | Grafana | 3000 | `http://localhost:3000` (`admin/admin`) |
 | PostgreSQL | 5432 | `localhost:5432` |
+| MongoDB | 27017 | `localhost:27017` |
 | Redis | 6379 | `localhost:6379` |
 | Kafka broker | 9092 | `localhost:9092` |
 
@@ -1021,7 +1022,7 @@ Para diagnóstico más simple, conviene levantar por capas:
 
 ```bash
 # 1) Infra base
-docker compose up -d postgres redis kafka kafka-ui
+docker compose up -d postgres mongodb redis kafka kafka-ui
 
 # 2) Servicios core
 docker compose up -d auth-service seat-inventory-service event-management-service payment-service notification-service booking-service
@@ -1215,6 +1216,7 @@ El entorno de infraestructura está disponible en Docker y ya incluye integracio
 
 - `NotificationMessageAdapter` publica en Kafka (`booking-events`)
 - `notification-service` consume con `@KafkaListener`
+- `event-management-service` soporta persistencia Mongo para catálogo (switch por propiedad)
 - `seat-inventory-service` soporta lock Redis real vía `RedisSeatLockAdapter`
 - `StripePaymentAdapter` implementa idempotencia por `bookingId`
 - `payment-service` valida firma de webhook (`Stripe-Signature`)
@@ -1359,6 +1361,7 @@ La arquitectura objetivo ya está definida, y el entorno Docker está preparado.
 - `seat-inventory-service` ya tiene `RedisSeatLockAdapter` (seleccionable por config).
 - `payment-service` ya aplica idempotencia por `bookingId` en `StripePaymentAdapter`.
 - `payment-service` ya valida firma de webhook por HMAC (`Stripe-Signature`).
+- `event-management-service` ya puede ejecutar repositorio de eventos/venues sobre MongoDB.
 
 Próximos pasos recomendados para cerrar el gap de producción:
 

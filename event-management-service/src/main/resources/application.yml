@@ -14,9 +14,16 @@ spring:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
     show-sql: ${SPRING_JPA_SHOW_SQL:true}
     open-in-view: false
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/eventdb}
 
 server:
   port: ${SERVER_PORT:8082}
+
+app:
+  event:
+    persistence-provider: ${APP_EVENT_PERSISTENCE_PROVIDER:jpa}
 
 services:
   seat-inventory:
